@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     const transaction = new Transaction();
     const ix = SystemProgram.transfer({
       fromPubkey: account,
-      toPubkey: new PublicKey("EvbHCMFaYbuqcq7omtse5KHz3mR3uHLsWxE9XkuCbDxv"), // Change to actual recipient
+      toPubkey: new PublicKey("AjyyarPe97Zwqp6KudxXDqpxH7XAoZHQvymzS6VnyBCF"), // My key
       lamports: action === '0.01' ? 100000000 : 500000000, // Adjust based on action
     });
 
