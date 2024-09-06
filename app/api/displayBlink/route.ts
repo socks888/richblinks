@@ -1,0 +1,117 @@
+// route.ts
+// route: /api/displayBlink/route.ts
+
+import { ActionGetResponse, ActionPostRequest, ActionPostResponse, ACTIONS_CORS_HEADERS, createPostResponse, MEMO_PROGRAM_ID } from "@solana/actions";
+import { Transaction, TransactionInstruction, ComputeBudgetProgram, PublicKey, Connection, clusterApiUrl, SystemProgram } from "@solana/web3.js";
+
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function OPTIONS(request: Request) {
+  return new Response(null, { headers: ACTIONS_CORS_HEADERS });
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id || isNaN(Number(id))) {
+    return NextResponse.json({ error: 'Invalid or missing id parameter' }, { status: 400 });
+  }
+
+  try {
+    const blink = await prisma.blink.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!blink) {
+      return NextResponse.json({ error: 'Blink not found' }, { status: 404 });
+    }
+
+    const response: ActionGetResponse = {
+      icon: new URL(blink.image_url, new URL(request.url).origin).toString(),
+      label: blink.label,
+      description: blink.description,
+      title: blink.title,
+      links: {
+        actions: [
+          {
+            href: request.url + "?action&amount=0.01",
+            label: "0.01 SOL",
+          },
+          {
+            href: request.url + "?action&amount=0.05",
+            label: "0.05 SOL",
+          },
+
+// -----------------
+{
+    label: "Send", // button text
+    href: request.url + "?action&amount={amount}", // this href will have a text input
+    parameters: [
+      {
+        name: "amount", 
+        label: "Enter the amount of SOL to send", // placeholder of the text input
+        required: true,
+      },
+    ],
+  },
+// -----------------
+
+        ],
+      },
+    };
+
+    return NextResponse.json(response, { headers: ACTIONS_CORS_HEADERS });
+
+  } catch (error) {
+    console.error('Error fetching Blink:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body: ActionPostRequest = await request.json();
+    let account: PublicKey;
+
+    try {
+      account = new PublicKey(body.account);
+    } catch (err) {
+      return new Response("Invalid Public key provided", {
+        status: 400,
+        headers: ACTIONS_CORS_HEADERS,
+      });
+    }
+
+    const url = new URL(request.url);
+    const action = url.searchParams.get("amount");
+
+    const transaction = new Transaction();
+    const ix = SystemProgram.transfer({
+      fromPubkey: account,
+      toPubkey: new PublicKey("EvbHCMFaYbuqcq7omtse5KHz3mR3uHLsWxE9XkuCbDxv"), // Change to actual recipient
+      lamports: action === '0.01' ? 100000000 : 500000000, // Adjust based on action
+    });
+
+    transaction.add(ix);
+    transaction.feePayer = account;
+
+    const connection = new Connection(clusterApiUrl("mainnet-beta"));
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+    const payload: ActionPostResponse = await createPostResponse({
+      fields: {
+        transaction,
+        message: "Thank you " + account + ". You have paid " + action,
+      },
+    });
+
+    return Response.json(payload, { headers: ACTIONS_CORS_HEADERS });
+
+  } catch (err) {
+    return Response.json({ error: "An unknown error occurred, sorry!" }, { status: 400 });
+  }
+}

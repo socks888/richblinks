@@ -1,0 +1,186 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+
+export default function Home() {
+  const { publicKey } = useWallet();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure that the component only renders after it's mounted on the client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // State for form data, this must be called unconditionally at the top
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    image_url: "",
+    amount1: "",
+    amount2: "",
+    blink_url: "",
+  });
+
+  // If not mounted, return null or a loader to prevent server-side rendering
+  if (!isMounted) {
+    return null;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!publicKey) {
+      alert("Please connect your wallet");
+      return;
+    }
+
+    const data = {
+      ...formData,
+      wallet_address: publicKey.toString(),
+    };
+
+    try {
+    
+      const res = await fetch("/api/createBlink", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        alert("Blink created successfully");
+        setFormData({
+          title: "",
+          description: "",
+          image_url: "",
+          amount1: "",
+          amount2: "",
+          blink_url: "",
+        });
+      } else {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error("Error creating Blink:", error);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <h1 className="text-2xl font-bold mb-6">Create a Blink</h1>
+
+      {/* Wallet Connect Button */}
+      <WalletMultiButton className="mb-6" />
+
+      {publicKey ? (
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md"
+        >
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Blink URL
+            </label>
+            <input
+              type="text"
+              placeholder="Blink URL"
+              value={formData.blink_url}
+              onChange={(e) => setFormData({ ...formData, blink_url: e.target.value })}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Title
+            </label>
+            <input
+              type="text"
+              placeholder="Title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Description
+            </label>
+            <textarea
+              placeholder="Description"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Image URL
+            </label>
+            <input
+              type="text"
+              placeholder="Image URL"
+              value={formData.image_url}
+              onChange={(e) =>
+                setFormData({ ...formData, image_url: e.target.value })
+              }
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Amount 1
+            </label>
+            <input
+              type="number"
+              placeholder="Amount 1"
+              value={formData.amount1}
+              onChange={(e) => setFormData({ ...formData, amount1: e.target.value })}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Amount 2
+            </label>
+            <input
+              type="number"
+              placeholder="Amount 2"
+              value={formData.amount2}
+              onChange={(e) => setFormData({ ...formData, amount2: e.target.value })}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-center">
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            >
+              Submit
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="text-red-500">Please connect your wallet to use the form</p>
+      )}
+    </div>
+  );
+}

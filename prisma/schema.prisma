@@ -1,0 +1,25 @@
+// prisma/schema.prisma
+
+// psql -h blinksdb.c3ic0rhyibs4.us-east-1.rds.amazonaws.com -p 5432 -U postgres
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Blink {
+  id             Int      @id @default(autoincrement())
+  title          String
+  description    String
+  image_url      String?
+  amount1        Float
+  amount2        Float
+  label          String
+  wallet_address String
+  date_added     DateTime @default(now())
+}

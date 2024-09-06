@@ -1,0 +1,183 @@
+
+// page.tsx
+// Front-end form for creating a blink
+// page.tsx
+"use client";
+
+import { useState } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useEffect } from 'react';
+
+export default function BlinkForm() {
+  const { publicKey } = useWallet();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    image_url: '',
+    amount1: 0.01,
+    amount2: 0.05,
+    label: ''
+  });
+
+  const [blinkUrl, setBlinkUrl] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name === 'amount1' || name === 'amount2') {
+      setFormData({ ...formData, [name]: parseFloat(value) });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  }
+
+  
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!publicKey) return alert('Connect your wallet first!');
+    
+    const response = await fetch('/api/createBlink', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...formData,
+        wallet_address: publicKey.toString(),
+      }),
+    });
+
+    const data = await response.json();
+    setBlinkUrl(`http://localhost:3000/api/displayBlink?id=${data.id}`);
+  };
+
+  return (
+    <div className="container">
+      <WalletMultiButton />
+      {!blinkUrl ? (
+        <form onSubmit={handleSubmit} className="form">
+          <h2>Create Your Blink</h2>
+          <input
+            type="text"
+            name="title"
+            placeholder="Title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+          />
+          <textarea
+            name="description"
+            placeholder="Description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="text"
+            name="image_url"
+            placeholder="Image URL"
+            value={formData.image_url}
+            onChange={handleChange}
+          />
+          <input
+            type="number"
+            name="amount1"
+            placeholder="Amount 1"
+            value={formData.amount1}
+            onChange={handleChange}
+            step="0.01"
+            required
+          />
+          <input
+            type="number"
+            name="amount2"
+            placeholder="Amount 2"
+            value={formData.amount2}
+            onChange={handleChange}
+            step="0.01"
+            required
+          />
+          <input
+            type="text"
+            name="label"
+            placeholder="Label"
+            value={formData.label}
+            onChange={handleChange}
+            required
+          />
+          <button type="submit">Create Blink</button>
+        </form>
+      ) : (
+        <div className="blink-container">
+          <textarea value={blinkUrl} readOnly className="blink-url" />
+          <button onClick={() => navigator.clipboard.writeText(blinkUrl)}>
+            Copy URL
+          </button>
+        </div>
+      )}
+
+      <style jsx>{`
+        .container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background-color: #f8f9fa;
+          min-height: 100vh;
+        }
+
+        .form {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          max-width: 400px;
+          background-color: white;
+          padding: 20px;
+          border-radius: 10px;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form h2 {
+          margin-bottom: 20px;
+        }
+
+        .form input,
+        .form textarea {
+          width: 100%;
+          padding: 10px;
+          margin-bottom: 10px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          font-size: 16px;
+          color: black;
+        }
+
+        .blink-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .blink-url {
+          font-weight: bold;
+          color: green;
+          text-align: center;
+          padding: 10px;
+          margin-bottom: 10px;
+        }
+
+        button {
+          background-color: #007bff;
+          color: white;
+          padding: 10px 20px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+      `}</style>
+    </div>
+  );
+}
